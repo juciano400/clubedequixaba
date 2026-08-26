@@ -1,0 +1,20 @@
+# Railway / Nixpacks build configuration
+# Pins Node 22 (required by Vite 7 + React 19) and uses pnpm via corepack,
+# matching the version declared in package.json (packageManager).
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = [
+  "corepack enable",
+  "corepack prepare pnpm@10.4.1 --activate",
+  "pnpm install --frozen-lockfile",
+]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "pnpm run start"
