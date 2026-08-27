@@ -303,7 +303,7 @@ export default function Home() {
               </div>
               <div className="event-details">
                 <span className="event-type">Encontro presencial</span>
-                <h3>Roda de leitura<br />na praça</h3>
+                <h3>Roda de leitura<br />na escola</h3>
                 <span className="event-meta"><MapPin size={14} /> Escola Estadual de Ensino Médio Herculano Pereira — Manoel Candeia, S/N, 58733-000, Quixaba/PB</span>
                 <span className="event-meta"><Clock3 size={14} /> 25 de maio, às 16h</span>
                 <button className="mini-link" onClick={() => toast.info("A agenda completa será divulgada em breve.")}>Ver agenda completa <ArrowRight size={14} /></button>
