@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -23,6 +23,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { AgendaItem, BookItem } from "@shared/content";
+import { DEFAULT_AGENDA, DEFAULT_BOOKS } from "@shared/content";
+import { fetchContent } from "@/lib/api";
 
 /**
  * Direção visual desta página: colagem editorial sertaneja.
@@ -83,43 +86,24 @@ const discoveryItems = [
   },
 ];
 
-const books = [
-  {
-    title: "O Alquimista",
-    author: "Paulo Coelho",
-    color: "book-orange",
-    eyebrow: "Travessia",
-    mark: "☼",
-  },
-  {
-    title: "Quarto de Despejo",
-    author: "Carolina Maria de Jesus",
-    color: "book-sand",
-    eyebrow: "Memória",
-    mark: "✦",
-  },
-  {
-    title: "1984",
-    author: "George Orwell",
-    color: "book-red",
-    eyebrow: "Futuro",
-    mark: "◉",
-  },
-  {
-    title: "A Hora da Estrela",
-    author: "Clarice Lispector",
-    color: "book-blue",
-    eyebrow: "Existência",
-    mark: "✳",
-  },
-  {
-    title: "Ensaio sobre a Cegueira",
-    author: "José Saramago",
-    color: "book-cream",
-    eyebrow: "Cidade",
-    mark: "—",
-  },
-];
+const MONTHS = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+const WEEKDAYS = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
+const FALLBACK_COLORS = ["book-orange", "book-sand", "book-red", "book-blue", "book-cream"];
+
+function formatEventDate(date: string) {
+  const parts = date.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => !n)) {
+    return { month: "", day: date, weekday: "", monthLong: "" };
+  }
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d);
+  return {
+    month: MONTHS[m - 1],
+    day: String(d).padStart(2, "0"),
+    weekday: WEEKDAYS[dt.getDay()],
+    monthLong: MONTHS[m - 1].toLowerCase(),
+  };
+}
 
 function scrollTo(id: string) {
   document.querySelector(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -129,6 +113,19 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [participationOpen, setParticipationOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [agenda, setAgenda] = useState<AgendaItem[]>(DEFAULT_AGENDA);
+  const [books, setBooks] = useState<BookItem[]>(DEFAULT_BOOKS);
+
+  useEffect(() => {
+    fetchContent()
+      .then((content) => {
+        if (Array.isArray(content.agenda)) setAgenda(content.agenda);
+        if (Array.isArray(content.books)) setBooks(content.books);
+      })
+      .catch(() => {
+        /* sem API (ex.: dev sem servidor): mantém o conteúdo padrão */
+      });
+  }, []);
 
   function handleParticipationSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -295,20 +292,41 @@ export default function Home() {
             <img className="event-landmark" src={landmarkImage} alt="" aria-hidden="true" />
             <div className="section-kicker">próximos encontros <span>✦</span></div>
             <h2 id="events-title">Puxe uma cadeira.<br /><em>A conversa começa aqui.</em></h2>
-            <article className="event-card">
-              <div className="calendar-card">
-                <span className="calendar-month">MAIO</span>
-                <strong>25</strong>
-                <span className="calendar-day">SÁBADO • 16H</span>
-              </div>
-              <div className="event-details">
-                <span className="event-type">Encontro presencial</span>
-                <h3>Roda de leitura<br />na escola</h3>
-                <span className="event-meta"><MapPin size={14} /> Escola Estadual de Ensino Médio Herculano Pereira — Manoel Candeia, S/N, 58733-000, Quixaba/PB</span>
-                <span className="event-meta"><Clock3 size={14} /> 25 de maio, às 16h</span>
-                <button className="mini-link" onClick={() => toast.info("A agenda completa será divulgada em breve.")}>Ver agenda completa <ArrowRight size={14} /></button>
-              </div>
-            </article>
+            {agenda.length === 0 ? (
+              <article className="event-card">
+                <div className="event-details">
+                  <span className="event-type">Em breve</span>
+                  <h3>Novos encontros a caminho</h3>
+                  <span className="event-meta">A próxima roda de leitura será divulgada por aqui.</span>
+                </div>
+              </article>
+            ) : (
+              agenda.map((item) => {
+                const f = formatEventDate(item.date);
+                return (
+                  <article className="event-card" key={item.id}>
+                    <div className="calendar-card">
+                      <span className="calendar-month">{f.month}</span>
+                      <strong>{f.day}</strong>
+                      <span className="calendar-day">
+                        {f.weekday}
+                        {item.time ? ` • ${item.time.toUpperCase()}` : ""}
+                      </span>
+                    </div>
+                    <div className="event-details">
+                      <span className="event-type">{item.type}</span>
+                      <h3>{item.title}</h3>
+                      {item.location && (
+                        <span className="event-meta"><MapPin size={14} /> {item.location}</span>
+                      )}
+                      {f.monthLong && (
+                        <span className="event-meta"><Clock3 size={14} /> {f.day} de {f.monthLong}{item.time ? `, às ${item.time}` : ""}</span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            )}
             <div className="event-handnote">Esperamos<br />por você! <span>♡</span></div>
           </div>
 
@@ -341,17 +359,27 @@ export default function Home() {
             <button className="mini-link" onClick={() => toast.info("A biblioteca de recomendações está chegando.")}>Ver todos <ArrowRight size={14} /></button>
           </div>
           <div className="bookshelf reveal-up delay-1">
-            {books.map((book, index) => (
-              <button className="book-item" key={book.title} onClick={() => toast.info(`${book.title}, de ${book.author}. Em breve: uma ficha de conversa.`)}>
-                <div className={`book-cover ${book.color}`} style={{ transform: `rotate(${index % 2 === 0 ? -2 : 2}deg)` }}>
-                  <span className="cover-top">{book.eyebrow}</span>
-                  <strong>{book.title}</strong>
-                  <span className="cover-mark">{book.mark}</span>
-                  <span className="cover-bottom">{book.author}</span>
-                </div>
-                <span className="book-caption">{book.title}</span>
-              </button>
-            ))}
+            {books.map((book, index) => {
+              const rotate = index % 2 === 0 ? -2 : 2;
+              const color = book.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+              return (
+                <button className="book-item" key={book.id} onClick={() => toast.info(`${book.title}, de ${book.author}.`)}>
+                  {book.coverUrl ? (
+                    <div className="book-cover book-cover-photo" style={{ transform: `rotate(${rotate}deg)` }}>
+                      <img src={book.coverUrl} alt={`Capa de ${book.title}, de ${book.author}`} loading="lazy" />
+                    </div>
+                  ) : (
+                    <div className={`book-cover ${color}`} style={{ transform: `rotate(${rotate}deg)` }}>
+                      {book.eyebrow && <span className="cover-top">{book.eyebrow}</span>}
+                      <strong>{book.title}</strong>
+                      {book.mark && <span className="cover-mark">{book.mark}</span>}
+                      <span className="cover-bottom">{book.author}</span>
+                    </div>
+                  )}
+                  <span className="book-caption">{book.title}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="shelf-line" />
         </section>
