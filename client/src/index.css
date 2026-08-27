@@ -437,3 +437,13 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 760px) {
   .admin-grid { grid-template-columns: 1fr; }
 }
+
+/* Cloudinary / configurações no painel */
+.admin-card-wide { max-width: 1080px; margin: 0 auto 22px; }
+.admin-card-title { position: relative; }
+.admin-tag { margin-left: auto; padding: 3px 10px; border-radius: 999px; font-size: 0.62rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.admin-tag.is-on { color: #1b5e20; background: #d7ecd0; }
+.admin-tag.is-off { color: #8a5a00; background: #f6e3b8; }
+.admin-hint { margin: 0 0 14px; color: var(--ink-soft); font-size: 0.84rem; line-height: 1.5; }
+.admin-hint strong { color: var(--blue-dark); }
+.admin-form-inline { padding-top: 0; border-top: 0; }

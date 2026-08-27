@@ -53,3 +53,17 @@ export const DEFAULT_CONTENT: SiteContent = {
 };
 
 export const BOOK_COLORS = ["book-orange", "book-sand", "book-red", "book-blue", "book-cream"];
+
+// Configurações do painel (armazenadas no servidor, acessíveis só ao admin).
+export interface CloudinarySettings {
+  cloudName: string;
+  uploadPreset: string; // preset "unsigned" criado no painel do Cloudinary
+}
+
+export interface AppSettings {
+  cloudinary: CloudinarySettings;
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  cloudinary: { cloudName: "", uploadPreset: "" },
+};

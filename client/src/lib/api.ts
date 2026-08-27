@@ -1,4 +1,4 @@
-import type { AgendaItem, BookItem, SiteContent } from "@shared/content";
+import type { AgendaItem, AppSettings, BookItem, SiteContent } from "@shared/content";
 
 const TOKEN_KEY = "clube_admin_token";
 
@@ -55,6 +55,41 @@ export const saveAgenda = (agenda: AgendaItem[], token: string) =>
 
 export const saveBooks = (books: BookItem[], token: string) =>
   put("/api/books", { books }, token);
+
+export async function getSettings(token: string): Promise<AppSettings> {
+  const res = await fetch("/api/settings", { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 401) throw new Error("Sessão expirada. Entre novamente.");
+  if (!res.ok) throw new Error("Não foi possível carregar as configurações.");
+  return res.json();
+}
+
+export async function saveSettings(settings: AppSettings, token: string): Promise<AppSettings> {
+  const res = await fetch("/api/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(settings),
+  });
+  if (res.status === 401) throw new Error("Sessão expirada. Entre novamente.");
+  if (!res.ok) throw new Error("Não foi possível salvar as configurações.");
+  return res.json();
+}
+
+// Upload direto (unsigned) do navegador para o Cloudinary. Retorna a URL segura.
+export async function uploadToCloudinary(file: File, cloudName: string, uploadPreset: string): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", uploadPreset);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error?.message || "Falha no upload para o Cloudinary.");
+  }
+  const data = await res.json();
+  return data.secure_url as string;
+}
 
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

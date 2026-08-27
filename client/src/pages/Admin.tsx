@@ -1,16 +1,20 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, BookOpen, CalendarDays, LogOut, Plus, Trash2, UploadCloud } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, Cloud, LogOut, Plus, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
-import type { AgendaItem, BookItem, SiteContent } from "@shared/content";
+import type { AgendaItem, AppSettings, BookItem, SiteContent } from "@shared/content";
+import { DEFAULT_SETTINGS } from "@shared/content";
 import {
   fetchContent,
   fileToDataUrl,
+  getSettings,
   getToken,
   login as apiLogin,
   saveAgenda,
   saveBooks,
+  saveSettings,
   setToken,
+  uploadToCloudinary,
 } from "@/lib/api";
 
 const uid = () =>
@@ -32,6 +36,7 @@ export default function Admin() {
   const [loggingIn, setLoggingIn] = useState(false);
 
   const [content, setContent] = useState<SiteContent | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
 
   const [agendaForm, setAgendaForm] = useState(emptyAgendaForm);
@@ -43,7 +48,29 @@ export default function Admin() {
     fetchContent()
       .then(setContent)
       .catch(() => toast.error("Não foi possível carregar o conteúdo."));
+    getSettings(token)
+      .then(setSettings)
+      .catch(() => {
+        /* mantém o padrão vazio */
+      });
   }, [token]);
+
+  const cloudinaryReady = Boolean(settings.cloudinary.cloudName && settings.cloudinary.uploadPreset);
+
+  async function persistSettings(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+    setBusy(true);
+    try {
+      const updated = await saveSettings(settings, token);
+      setSettings(updated);
+      toast.success("Configurações salvas.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar as configurações.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
@@ -132,8 +159,16 @@ export default function Admin() {
     }
     setBusy(true);
     try {
-      const coverData = await fileToDataUrl(bookFile);
-      const item: BookItem = { id: uid(), title: bookForm.title.trim(), author: bookForm.author.trim(), coverData };
+      const base = { id: uid(), title: bookForm.title.trim(), author: bookForm.author.trim() };
+      let item: BookItem;
+      if (cloudinaryReady) {
+        const coverUrl = await uploadToCloudinary(bookFile, settings.cloudinary.cloudName, settings.cloudinary.uploadPreset);
+        item = { ...base, coverUrl };
+      } else {
+        // Sem Cloudinary configurado: guarda a capa no servidor (requer Volume no Railway).
+        const coverData = await fileToDataUrl(bookFile);
+        item = { ...base, coverData };
+      }
       const updated = await saveBooks([...content.books, item], token!);
       setContent(updated);
       setBookForm({ title: "", author: "" });
@@ -202,6 +237,47 @@ export default function Admin() {
       {!content ? (
         <p className="admin-loading">Carregando…</p>
       ) : (
+        <>
+        {/* CONFIGURAÇÕES: CLOUDINARY */}
+        <section className="admin-card admin-card-wide">
+          <div className="admin-card-title">
+            <Cloud size={19} /> <h2>Cloudinary (capas)</h2>
+            <span className={`admin-tag ${cloudinaryReady ? "is-on" : "is-off"}`}>
+              {cloudinaryReady ? "ativo" : "não configurado"}
+            </span>
+          </div>
+          <p className="admin-hint">
+            Configure o Cloudinary para hospedar as capas das obras. No painel do Cloudinary, crie um
+            <strong> Upload preset</strong> do tipo <strong>Unsigned</strong> e informe abaixo o
+            <strong> Cloud name</strong> e o nome do preset. Enquanto não configurar, as capas ficam salvas no servidor.
+          </p>
+          <form className="admin-form admin-form-inline" onSubmit={persistSettings}>
+            <div className="admin-form-row">
+              <div>
+                <label>Cloud name</label>
+                <input
+                  value={settings.cloudinary.cloudName}
+                  onChange={(e) => setSettings({ cloudinary: { ...settings.cloudinary, cloudName: e.target.value } })}
+                  placeholder="ex.: dxxxxxx"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label>Upload preset (unsigned)</label>
+                <input
+                  value={settings.cloudinary.uploadPreset}
+                  onChange={(e) => setSettings({ cloudinary: { ...settings.cloudinary, uploadPreset: e.target.value } })}
+                  placeholder="ex.: clube_quixaba"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+            <button className="admin-btn admin-btn-primary" type="submit" disabled={busy}>
+              Salvar chave
+            </button>
+          </form>
+        </section>
+
         <div className="admin-grid">
           {/* AGENDA */}
           <section className="admin-card">
@@ -300,6 +376,7 @@ export default function Admin() {
             </form>
           </section>
         </div>
+        </>
       )}
     </div>
   );

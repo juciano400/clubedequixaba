@@ -6,7 +6,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   DEFAULT_CONTENT,
+  DEFAULT_SETTINGS,
   type AgendaItem,
+  type AppSettings,
   type BookItem,
   type SiteContent,
 } from "../shared/content";
@@ -20,6 +22,7 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), "data");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const CONTENT_FILE = path.join(DATA_DIR, "content.json");
+const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 
 // --- Autenticação (apenas e-mail, por escolha do usuário) ------------------
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "profjuciano").trim().toLowerCase();
@@ -47,6 +50,24 @@ function loadContent(): SiteContent {
 
 function saveContent(content: SiteContent) {
   fs.writeFileSync(CONTENT_FILE, JSON.stringify(content, null, 2), "utf-8");
+}
+
+function loadSettings(): AppSettings {
+  try {
+    const raw = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+    return {
+      cloudinary: {
+        cloudName: typeof raw?.cloudinary?.cloudName === "string" ? raw.cloudinary.cloudName : "",
+        uploadPreset: typeof raw?.cloudinary?.uploadPreset === "string" ? raw.cloudinary.uploadPreset : "",
+      },
+    };
+  } catch {
+    return { cloudinary: { ...DEFAULT_SETTINGS.cloudinary } };
+  }
+}
+
+function saveSettings(settings: AppSettings) {
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
 }
 
 const str = (v: unknown, max = 600) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -98,8 +119,13 @@ function sanitizeBooks(input: unknown): BookItem[] {
     if (typeof raw?.coverData === "string" && raw.coverData.startsWith("data:")) {
       const url = writeCover(id, raw.coverData);
       if (url) book.coverUrl = url;
-    } else if (typeof raw?.coverUrl === "string" && raw.coverUrl.startsWith("/uploads/")) {
-      book.coverUrl = str(raw.coverUrl, 200);
+    } else if (
+      typeof raw?.coverUrl === "string" &&
+      (raw.coverUrl.startsWith("/uploads/") ||
+        raw.coverUrl.startsWith("https://") ||
+        raw.coverUrl.startsWith("http://"))
+    ) {
+      book.coverUrl = str(raw.coverUrl, 400);
     }
     if (!book.coverUrl) {
       // capa "desenhada" (fallback)
@@ -157,6 +183,22 @@ async function startServer() {
     content.books = sanitizeBooks(req.body?.books);
     saveContent(content);
     res.json(content);
+  });
+
+  // Configurações do painel (Cloudinary) — só o admin lê/escreve
+  app.get("/api/settings", requireAuth, (_req, res) => {
+    res.json(loadSettings());
+  });
+
+  app.put("/api/settings", requireAuth, (req, res) => {
+    const settings: AppSettings = {
+      cloudinary: {
+        cloudName: str(req.body?.cloudinary?.cloudName, 120),
+        uploadPreset: str(req.body?.cloudinary?.uploadPreset, 120),
+      },
+    };
+    saveSettings(settings);
+    res.json(settings);
   });
 
   // Capas enviadas (diretório durável)

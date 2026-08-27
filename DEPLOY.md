@@ -20,6 +20,23 @@ encontros" e "Recomendados do mês").
 > O login é apenas por e-mail (sem senha), conforme solicitado. Para trocar o
 > e-mail de acesso, defina a variável `ADMIN_EMAIL`.
 
+## Capas das obras no Cloudinary (recomendado)
+
+Para as capas ficarem hospedadas no Cloudinary (e não dependerem do disco do Railway):
+
+1. Crie uma conta em cloudinary.com e anote o **Cloud name** (aparece no Dashboard).
+2. Em **Settings → Upload → Upload presets**, crie um preset com **Signing Mode: Unsigned**
+   e copie o nome dele.
+3. No painel `/admin`, no card **Cloudinary (capas)**, preencha o Cloud name e o Upload preset
+   e clique em **Salvar chave**. O selo muda para "ativo".
+
+A partir daí, toda capa enviada no painel vai direto do navegador para o Cloudinary, e o site
+usa a URL retornada. Enquanto o Cloudinary não estiver configurado, as capas são salvas no
+servidor (nesse caso o Volume abaixo é necessário também para as imagens).
+
+> A agenda e os metadados das obras continuam no `content.json` (ver abaixo); só as imagens
+> das capas passam a ficar no Cloudinary.
+
 ## Persistência dos dados (IMPORTANTE)
 
 A agenda e as capas ficam salvas em disco, no diretório apontado por `DATA_DIR`
