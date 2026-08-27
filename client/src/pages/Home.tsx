@@ -39,6 +39,7 @@ const booksCoffeeImage = "/assets/quixaba-books-coffee.png";
 const bookshelfImage = "/assets/quixaba-bookshelf.png";
 const signpostImage = "/assets/quixaba-signpost.png";
 const landmarkImage = "/assets/quixaba-landmark.png";
+const schoolLogo = "/assets/escola-herculano-pereira.png";
 
 const navItems = [
   { label: "Início", href: "#inicio" },
@@ -239,6 +240,27 @@ export default function Home() {
               ))}
               <div className="paper-heart">♡</div>
             </div>
+          </div>
+        </section>
+
+        <section className="institution-section section-pad" id="projeto" aria-labelledby="institution-title">
+          <div className="institution-logo reveal-up">
+            <img
+              src={schoolLogo}
+              alt="Escola Estadual de Ensino Médio Herculano Pereira"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+                const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = "flex";
+              }}
+            />
+            <span className="institution-logo-fallback">Escola Estadual de Ensino Médio<strong>Herculano Pereira</strong></span>
+          </div>
+          <div className="institution-copy reveal-up delay-1">
+            <div className="section-kicker">a iniciativa <span>✦</span></div>
+            <h2 id="institution-title">Um projeto da <em>Escola Herculano Pereira</em></h2>
+            <p>O Clube de Leitura de Quixaba-PB é uma iniciativa da disciplina de Literatura da Escola Estadual de Ensino Médio Herculano Pereira, criada para aproximar os estudantes da leitura, da literatura e da escrita.</p>
+            <p>Por meio de encontros, rodas de conversa, debates, produções autorais e ações de circulação literária, o Clube busca transformar a leitura em uma experiência de formação, diálogo, criatividade e protagonismo juvenil, valorizando também a cultura, a memória e as vozes do território paraibano.</p>
           </div>
         </section>
 
